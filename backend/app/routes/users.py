@@ -4,6 +4,7 @@ from ..database import SessionLocal
 from ..models import User
 from ..schemas import UserCreate
 from ..auth import hash_password
+from ..schemas import UserLogin
 
 router = APIRouter()
 
@@ -30,3 +31,25 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "user created"}
+router = APIRouter()
+
+# existing endpoint
+@router.post("/users")
+def create_user():
+    ...
+
+# NEW login endpoint
+@router.post("/login")
+def login(user: UserLogin, db: Session = Depends(get_db)):
+
+    db_user = db.query(User).filter(User.email == user.email).first()
+
+    if not db_user:
+        raise HTTPException(status_code=401, detail="invalid credentials")
+
+    if not verify_password(user.password, db_user.password_hash):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+
+    token = create_access_token({"user_id": db_user.id})
+
+    return {"access_token": token}
